@@ -55,7 +55,7 @@ function dataBuilder() {
       const callP = Number(
         (
           seed[i][0] +
-          Number(randomInAB(-5, 5).toFixed(2)) * seed[i][0]
+          (Number(randomInAB(-5, 5).toFixed(2)) * seed[i][0]) / 100
         ).toFixed(2),
       );
       const callCP = Number(
@@ -64,11 +64,11 @@ function dataBuilder() {
       const putP = Number(
         (
           seed[i][1] +
-          Number(randomInAB(-5, 5).toFixed(2)) * seed[i][1]
+          (Number(randomInAB(-5, 5).toFixed(2)) * seed[i][1]) / 100
         ).toFixed(2),
       );
       const putCP = Number(
-        (((seed[i][1] - putP) / seed[i][1]) * 100).toFixed(2),
+        (((putP - seed[i][1]) / seed[i][1]) * 100).toFixed(2),
       );
       x.push(callCP);
       x.push(callP);
@@ -92,7 +92,7 @@ function dataBuilder() {
         const callP = Number(
           (
             seed[i][0] +
-            Number(randomInAB(-5, 5).toFixed(2)) * seed[i][0]
+            (Number(randomInAB(-5, 5).toFixed(2)) * seed[i][0]) / 100
           ).toFixed(2),
         );
         const callCP = Number(
@@ -111,11 +111,11 @@ function dataBuilder() {
         const putP = Number(
           (
             seed[i][1] +
-            Number(randomInAB(-5, 5).toFixed(2)) * seed[i][1]
+            (Number(randomInAB(-5, 5).toFixed(2)) * seed[i][1]) / 100
           ).toFixed(2),
         );
         const putCP = Number(
-          (((preCalcData[i][3] - putP) / preCalcData[i][3]) * 100).toFixed(2),
+          (((putP - preCalcData[i][3]) / preCalcData[i][3]) * 100).toFixed(2),
         );
         x.push(putP);
         x.push(putCP);
@@ -128,11 +128,11 @@ function dataBuilder() {
     console.log(`call probablity : ${cp}/${inis}`);
     console.log(`Put probablity : ${pp}/${inis}`);
     const seedChanger = Math.random();
-    if (seedChanger < 0.05) {
+    if (seedChanger < 0.01) {
       console.log("changing the seed");
       underlying =
         underlying_seed +
-        (Number(randomInAB(-5, 5).toFixed(2)) * underlying_seed) / 100;
+        (Number(randomInAB(-1, 1).toFixed(2)) * underlying_seed) / 100;
       seedPopulator();
     }
     iniChecker = true;
