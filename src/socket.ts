@@ -2,6 +2,17 @@ import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 
+const initialStrike = 18000;
+
+let seed: number[][] = [];
+let underlying: number = 22498;
+let underlying_seed = 22500;
+let connections = 0;
+let timeInterval: NodeJS.Timeout | null = null;
+let iniChecker: boolean = false;
+seedPopulator();
+let preCalcData: number[][] = dataBuilder();
+
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
@@ -15,6 +26,8 @@ function randomInAB(miner: number, maxer: number) {
 }
 
 function seedPopulator() {
+  console.log(`running seedPopulator, underlying : ${underlying}`);
+  seed = [];
   for (let i = 0; i < 75; i++) {
     const x = [];
     let callP: number, putP: number;
@@ -29,20 +42,31 @@ function seedPopulator() {
     x.push(putP);
     seed.push(x);
   }
+  console.log("seed population done");
+  console.log(seed);
 }
 
 function dataBuilder() {
   let a = [];
-  if (preCalcData.length === 0) {
+  if (!iniChecker) {
+    console.log("here");
     for (let i = 0; i < 75; i++) {
       const x = [];
-      const callP =
-        seed[i][0] + Number(randomInAB(-5, 5).toFixed(2)) * seed[i][0];
+      const callP = Number(
+        (
+          seed[i][0] +
+          Number(randomInAB(-5, 5).toFixed(2)) * seed[i][0]
+        ).toFixed(2),
+      );
       const callCP = Number(
         (((callP - seed[i][0]) / seed[i][0]) * 100).toFixed(2),
       );
-      const putP =
-        seed[i][1] + Number(randomInAB(-5, 5).toFixed(2)) * seed[i][1];
+      const putP = Number(
+        (
+          seed[i][1] +
+          Number(randomInAB(-5, 5).toFixed(2)) * seed[i][1]
+        ).toFixed(2),
+      );
       const putCP = Number(
         (((seed[i][1] - putP) / seed[i][1]) * 100).toFixed(2),
       );
@@ -53,15 +77,24 @@ function dataBuilder() {
       x.push(putCP);
       a.push(x);
     }
+    iniChecker = true;
     return a;
   } else {
+    const inis = 75;
+    let cp: number = 0,
+      pp: number = 0;
     for (let i = 0; i < 75; i++) {
       const x = [];
-      const probC = Number(Math.random().toFixed());
+      const probC = Number(Math.random().toFixed(2));
       const probP = Number(Math.random().toFixed(2));
-      if (probC < 0.3) {
-        const callP =
-          seed[i][0] + Number(randomInAB(-5, 5).toFixed(2)) * seed[i][0];
+      if (probC < 0.2) {
+        cp += 1;
+        const callP = Number(
+          (
+            seed[i][0] +
+            Number(randomInAB(-5, 5).toFixed(2)) * seed[i][0]
+          ).toFixed(2),
+        );
         const callCP = Number(
           (((callP - preCalcData[i][1]) / preCalcData[i][1]) * 100).toFixed(2),
         );
@@ -73,9 +106,14 @@ function dataBuilder() {
         x.push(preCalcData[i][1]);
         x.push(initialStrike + i * 100);
       }
-      if (probP < 0.3) {
-        const putP =
-          seed[i][1] + Number(randomInAB(-5, 5).toFixed(2)) * seed[i][1];
+      if (probP < 0.2) {
+        pp += 1;
+        const putP = Number(
+          (
+            seed[i][1] +
+            Number(randomInAB(-5, 5).toFixed(2)) * seed[i][1]
+          ).toFixed(2),
+        );
         const putCP = Number(
           (((preCalcData[i][3] - putP) / preCalcData[i][3]) * 100).toFixed(2),
         );
@@ -87,37 +125,29 @@ function dataBuilder() {
       }
       a.push(x);
     }
+    console.log(`call probablity : ${cp}/${inis}`);
+    console.log(`Put probablity : ${pp}/${inis}`);
+    const seedChanger = Math.random();
+    if (seedChanger < 0.05) {
+      console.log("changing the seed");
+      underlying =
+        underlying_seed +
+        (Number(randomInAB(-5, 5).toFixed(2)) * underlying_seed) / 100;
+      seedPopulator();
+    }
+    iniChecker = true;
     return a;
   }
-  // for (let i = 0; i < 75; i++) {
-  //   const x = [];
-  //   x.push(Number(randomInAB(1, 10).toFixed(2)));
-  //   x.push(Number(randomInAB(20000, 25000).toFixed(2)));
-  //   x.push(Number((initialStrike + i * 100).toFixed(2)));
-  //   x.push(Number(randomInAB(20000, 25000).toFixed(2)));
-  //   x.push(Number(randomInAB(1, 10).toFixed(2)));
-  //   a.push(x);
-  // }
-  // return a;
 }
-
-const initialStrike = 18000;
-let seed: number[][] = [];
-let underlying: number = 22498;
-let connections = 0;
-let timeInterval: NodeJS.Timeout | null = null;
-let preCalcData: number[][] = dataBuilder();
-
-seedPopulator();
 
 io.on("connection", (socket) => {
   connections += 1;
   if (connections > 0 && timeInterval === null) {
     console.log("starting data transmission");
-    io.emit("data", preCalcData);
+    io.emit("data", { data: preCalcData, underlying: underlying });
     preCalcData = dataBuilder();
     timeInterval = setInterval(() => {
-      io.emit("data", dataBuilder());
+      io.emit("data", { data: dataBuilder(), underlying: underlying });
       preCalcData = dataBuilder();
     }, 1000);
   }
