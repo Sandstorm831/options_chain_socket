@@ -87,7 +87,7 @@ function dataBuilder() {
       const x = [];
       const probC = Number(Math.random().toFixed(2));
       const probP = Number(Math.random().toFixed(2));
-      if (probC < 0.2) {
+      if (probC < 0.1) {
         cp += 1;
         const callP = Number(
           (
@@ -106,7 +106,7 @@ function dataBuilder() {
         x.push(preCalcData[i][1]);
         x.push(initialStrike + i * 100);
       }
-      if (probP < 0.2) {
+      if (probP < 0.1) {
         pp += 1;
         const putP = Number(
           (
