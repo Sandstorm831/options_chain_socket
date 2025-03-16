@@ -63,7 +63,7 @@ Once you finish installation Node.js, follow the commands to setup the project l
    ```sh
     npm run start
    ```
-   This completes the set-up for this project, all the functionalities present in the application will now be live at `port: 8080`, remember to bypass `CORS` setting present in the `/src/socket.ts` file to connect to any domain other than `localhost:3000`.
+This completes the set-up for this project, all the functionalities present in the application will now be live at `port: 8080`, remember to bypass `CORS` setting present in the `/src/socket.ts` file to connect to any domain other than `localhost:3000`.
 
 <!-- LICENSE -->
 
