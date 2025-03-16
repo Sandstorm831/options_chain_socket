@@ -26,7 +26,7 @@ function randomInAB(miner: number, maxer: number) {
 }
 
 function seedPopulator() {
-  console.log(`running seedPopulator, underlying : ${underlying}`);
+  // console.log(`running seedPopulator, underlying : ${underlying}`);
   seed = [];
   for (let i = 0; i < 75; i++) {
     const x = [];
@@ -42,14 +42,13 @@ function seedPopulator() {
     x.push(putP);
     seed.push(x);
   }
-  console.log("seed population done");
-  console.log(seed);
+  // console.log("seed population done");
+  // console.log(seed);
 }
 
 function dataBuilder() {
   let a = [];
   if (!iniChecker) {
-    console.log("here");
     for (let i = 0; i < 75; i++) {
       const x = [];
       const callP = Number(
@@ -125,11 +124,11 @@ function dataBuilder() {
       }
       a.push(x);
     }
-    console.log(`call probablity : ${cp}/${inis}`);
-    console.log(`Put probablity : ${pp}/${inis}`);
+    // console.log(`call probablity : ${cp}/${inis}`);
+    // console.log(`Put probablity : ${pp}/${inis}`);
     const seedChanger = Math.random();
     if (seedChanger < 0.01) {
-      console.log("changing the seed");
+      // console.log("changing the seed");
       underlying =
         underlying_seed +
         (Number(randomInAB(-1, 1).toFixed(2)) * underlying_seed) / 100;
@@ -142,6 +141,7 @@ function dataBuilder() {
 
 io.on("connection", (socket) => {
   connections += 1;
+  console.log(`Connected devices : ${connections}`);
   if (connections > 0 && timeInterval === null) {
     console.log("starting data transmission");
     io.emit("data", { data: preCalcData, underlying: underlying });
@@ -149,10 +149,11 @@ io.on("connection", (socket) => {
     timeInterval = setInterval(() => {
       io.emit("data", { data: dataBuilder(), underlying: underlying });
       preCalcData = dataBuilder();
-    }, 1000);
+    }, 200);
   }
   socket.on("disconnect", () => {
     connections -= 1;
+    console.log(`Connected devices : ${connections}`);
     if (connections <= 0) {
       if (timeInterval) {
         clearInterval(timeInterval);
