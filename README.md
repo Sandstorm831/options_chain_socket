@@ -2,7 +2,7 @@
 <h3 align="center">Options-Socket</h3>
 
   <p align="center">
-    Options-Socket is an open-source <a href="https://socket.io">Socket.IO</a> server for <a href="https://github.com/sandstorm831/option_chain">Option-Chain</a>.
+    Options-Socket is an open-source <a href="https://socket.io">Socket.IO</a> server for my <a href="https://github.com/sandstorm831/option_chain">Option-Chain</a> Project.
     <br />
   </p>
 </div>
@@ -23,7 +23,7 @@
 
 ## About The Project
 
-Options-Socket is an open-source socket-io server primarily made for the [Option-Chain](https://github.com/sandstorm831/option_chain) project. It generates option-strike price data for 75 call and put options at an interval of 200ms along with the price of underlying. The prices generated are in *loosely* in accordance with [Black-Scholes model](https://en.wikipedia.org/wiki/Black%E2%80%93Scholes_model), with updates on prices and underlying occuring on a probablistic manner with varying probablity.
+Options-Socket is an open-source socket-io server primarily made for the [Option-Chain](https://github.com/sandstorm831/option_chain) project. It generates option-strike price data for `75` call and put options at an interval of `200ms` along with the price of underlying. The prices generated are **loosely** in accordance with [Black-Scholes model](https://en.wikipedia.org/wiki/Black%E2%80%93Scholes_model), with updates on prices and underlying occuring on a probablistic manner with varying probablity.
 ### Built With
 
 [![Socket.IO][Socket.io]][Socket-url]
@@ -63,7 +63,7 @@ Once you finish installation Node.js, follow the commands to setup the project l
    ```sh
     npm run start
    ```
-   This completes the set-up for this project, all the functionalities present in the application will now be live at `port: 8080`, remember to bypass `CORS` setting present in the `server.ts` file to connect to any domain other than `localhost:3000`.
+   This completes the set-up for this project, all the functionalities present in the application will now be live at `port: 8080`, remember to bypass `CORS` setting present in the `/src/socket.ts` file to connect to any domain other than `localhost:3000`.
 
 <!-- LICENSE -->
 
