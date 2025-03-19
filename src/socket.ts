@@ -1,13 +1,14 @@
 import express from "express";
 import { createServer } from "http";
 import { DefaultEventsMap, Server, Socket } from "socket.io";
+import { Token } from "typescript";
 
 const initialStrikeN = 18000;
 const initialStrikeS = 68000;
 
-const usersToSubscribers: Map<
+const SocketToSubscribers: Map<
   Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>,
-  string
+  string[]
 > = new Map();
 
 let seed: number[][] = [];
@@ -33,6 +34,11 @@ const yesterOptionPrice: yesterPriceHolder = {
   S: [],
 };
 
+type tokenVal = {
+  token: string;
+  val: number;
+};
+
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
@@ -40,6 +46,25 @@ const io = new Server(httpServer, {
     origin: "http://localhost:3000",
   },
 });
+
+function getIndexfromToken(token: string) {
+  let index, subIndex, truthInd;
+  const num = Number(token.slice(0, token.length - 1));
+  const sym = token[token.length - 1];
+  subIndex = sym === "C" ? 1 : 2;
+  truthInd = sym === "C" ? 3 : 4;
+  if (num < 30000) {
+    index = (num - initialStrikeN) / 100;
+  } else {
+    index = (num - initialStrikeS) / 100;
+  }
+  return [index, subIndex, truthInd];
+}
+
+function sortCompareFunc(a: string, b: string) {
+  if (a.length !== b.length) return a.length - b.length;
+  return a.localeCompare(b);
+}
 
 function randomYesterdayPrices() {
   for (let j = 0; j < 2; j++) {
@@ -120,8 +145,8 @@ function initializerBuilder(ini: number, fin: number, a: number[][]) {
     else x.push(initialStrikeS + (i - 75) * 100);
     x.push(putP);
     x.push(putCP);
-    if (i < 75) dbObject.push([initialStrikeN + i * 100, callP, putP]);
-    else dbObject.push([initialStrikeS + (i - 75) * 100, callP, putP]);
+    if (i < 75) dbObject.push([initialStrikeN + i * 100, callP, putP, 1, 1]);
+    else dbObject.push([initialStrikeS + (i - 75) * 100, callP, putP, 1, 1]);
     a.push(x);
   }
 }
@@ -176,12 +201,13 @@ function dataBuilder() {
         x.push(callCP);
         x.push(callP);
         dbObject[i][1] = callP;
+        dbObject[i][3] = 1;
         if (i < 75) x.push(initialStrikeN + i * 100);
         else x.push(initialStrikeS + (i - 75) * 100);
       } else {
         x.push(preCalcData[i][0]);
         x.push(preCalcData[i][1]);
-        // Nothing to be done if value is unchanged
+        dbObject[i][3] = 0;
         if (i < 75) x.push(initialStrikeN + i * 100);
         else x.push(initialStrikeS + (i - 75) * 100);
       }
@@ -199,10 +225,11 @@ function dataBuilder() {
         x.push(putP);
         x.push(putCP);
         dbObject[i][2] = putP;
+        dbObject[i][4] = 1;
       } else {
         x.push(preCalcData[i][3]);
         x.push(preCalcData[i][4]);
-        // Nothing to be done if value is unchanged
+        dbObject[i][4] = 0;
       }
       a.push(x);
     }
@@ -214,28 +241,148 @@ function dataBuilder() {
   }
 }
 
+function getLatestvalues(subscriptions: string[]): tokenVal[] {
+  let Ndone = false;
+  let Sdone = false;
+  let finalSet: tokenVal[] = [];
+  for (let i = 0; i < subscriptions.length; i++) {
+    if (Ndone && Sdone) break;
+    else if (subscriptions[i] === "N") {
+      Ndone = true;
+      for (let j = 0; j < 75; j++) {
+        if (dbObject[j][3] === 1) {
+          finalSet.push({
+            token: `${dbObject[j][0].toString()}C`,
+            val: dbObject[j][1],
+          });
+        }
+        if (dbObject[j][4] === 1) {
+          finalSet.push({
+            token: `${dbObject[j][0].toString()}P`,
+            val: dbObject[j][2],
+          });
+        }
+      }
+    } else if (subscriptions[i] === "S") {
+      Sdone = true;
+      for (let j = 75; j < 150; j++) {
+        if (dbObject[j][3] === 1) {
+          finalSet.push({
+            token: `${dbObject[j][0].toString()}C`,
+            val: dbObject[j][1],
+          });
+        }
+        if (dbObject[j][4] === 1) {
+          finalSet.push({
+            token: `${dbObject[j][0].toString()}P`,
+            val: dbObject[j][2],
+          });
+        }
+      }
+    } else {
+      if (
+        Ndone &&
+        Number(subscriptions[i].slice(0, subscriptions[i].length - 1)) < 30000
+      ) {
+        continue;
+      } else if (
+        Sdone &&
+        Number(subscriptions[i].slice(0, subscriptions[i].length - 1)) > 30000
+      ) {
+        continue;
+      } else {
+        const [ind, subind, truthInd] = getIndexfromToken(subscriptions[i]);
+        if (dbObject[ind][truthInd] === 1) {
+          finalSet.push({
+            token: subscriptions[i],
+            val: dbObject[ind][subind],
+          });
+        }
+      }
+    }
+  }
+  return finalSet;
+}
+
 io.on("connection", (socket) => {
   connections += 1;
+  SocketToSubscribers.set(socket, []);
   console.log(`Connected devices : ${connections}`);
   if (connections > 0 && timeInterval === null) {
     console.log("starting data transmission");
-    io.emit("data", {
-      data: preCalcData,
-      underlyingN: underlyingN,
-      underlyingS: underlyingS,
+    console.time("measuringInitialFetch");
+    SocketToSubscribers.forEach((val, socketOne) => {
+      const lvals: tokenVal[] = getLatestvalues(val);
+      if (lvals.length > 0) socketOne.emit("update", lvals);
     });
-    preCalcData = dataBuilder();
+    console.timeEnd("measuringInitialFetch");
+    // io.emit("data", {
+    //   data: preCalcData,
+    //   underlyingN: underlyingN,
+    //   underlyingS: underlyingS,
+    // });
+    dataBuilder();
     timeInterval = setInterval(() => {
-      io.emit("data", {
-        data: dataBuilder(),
-        underlyingN: underlyingN,
-        underlyingS: underlyingS,
+      console.time("measuringRoutineFetch");
+      SocketToSubscribers.forEach((val, socketOne) => {
+        const lvals: tokenVal[] = getLatestvalues(val);
+        if (lvals.length > 0) socketOne.emit("update", lvals);
       });
-      preCalcData = dataBuilder();
+      console.timeEnd("measuringRoutineFetch");
+      dataBuilder();
     }, 200);
   }
+
+  socket.on("optionchain", (data: string) => {
+    if (data === "N") {
+      socket.emit("optionchainN", dbObject.slice(0, 75));
+      const temp = SocketToSubscribers.get(socket);
+      temp?.push(data);
+      temp?.sort(sortCompareFunc);
+      if (temp) SocketToSubscribers.set(socket, temp);
+      else SocketToSubscribers.set(socket, [data]);
+    } else if (data === "S") {
+      socket.emit("optionchainS", dbObject.slice(75, dbObject.length - 1));
+      const temp = SocketToSubscribers.get(socket);
+      temp?.push(data);
+      temp?.sort(sortCompareFunc);
+      if (temp) SocketToSubscribers.set(socket, temp);
+      else SocketToSubscribers.set(socket, [data]);
+    }
+  });
+
+  socket.on("release", (data: string) => {
+    const old = SocketToSubscribers.get(socket);
+    const x: string[] = [];
+    old?.forEach((elem) => {
+      if (elem !== data) x.push(elem);
+    });
+    SocketToSubscribers.set(socket, x);
+  });
+
+  socket.on("realtime", (data: string) => {
+    const token = Number(data.slice(0, data.length - 1));
+    const PorC = data[data.length - 1];
+    let secInd: number;
+    let ind: number;
+    if (token < 30000) {
+      ind = (token - initialStrikeN) / 100;
+    } else {
+      ind = (token - initialStrikeS) / 100;
+    }
+    if (PorC === "P") secInd = 2;
+    else secInd = 1;
+    socket.emit("realtimeD", dbObject[ind][secInd]);
+    const temp = SocketToSubscribers.get(socket);
+    temp?.push(data);
+    temp?.sort(sortCompareFunc);
+    if (temp) SocketToSubscribers.set(socket, temp);
+    else SocketToSubscribers.set(socket, [data]);
+  });
+
   socket.on("disconnect", () => {
     connections -= 1;
+    SocketToSubscribers.delete(socket);
     console.log(`Connected devices : ${connections}`);
     if (connections <= 0) {
       if (timeInterval) {
@@ -258,8 +405,8 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("tokens", (data) => {
-    usersToSubscribers.set(socket, data);
+  socket.on("tokens", (data: string) => {
+    // SocketToSubscribers.set(socket, data);
   });
 
   socket.on("option_chain", () => {});
