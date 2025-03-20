@@ -14,6 +14,8 @@ const SocketToSubscribers: Map<
 let seed: number[][] = [];
 let underlyingN: number = 22498;
 let underlyingS: number = 22498;
+let underlyingNC: boolean = true;
+let underlyingSC: boolean = true;
 let underlying_seed_N = 22500;
 let underlying_seed_S = 72500;
 let connections = 0;
@@ -33,6 +35,7 @@ const yesterOptionPrice: yesterPriceHolder = {
   N: [],
   S: [],
 };
+randomYesterdayPrices();
 
 type tokenVal = {
   token: string;
@@ -66,11 +69,12 @@ function sortCompareFunc(a: string, b: string) {
   return a.localeCompare(b);
 }
 
+// have to add weak black-scholes
 function randomYesterdayPrices() {
   for (let j = 0; j < 2; j++) {
     for (let i = 0; i < 75; i++) {
-      const Cyp = randomInAB(20000, 25000);
-      const Pyp = randomInAB(20000, 25000);
+      const Cyp = Number(randomInAB(0, 3000).toFixed(2));
+      const Pyp = Number(randomInAB(0, 3000).toFixed(2));
       const x = [Cyp, Pyp];
       if (j == 0) {
         yesterOptionPrice.N.push(x);
@@ -161,6 +165,9 @@ function seedChangerFunc() {
       underlying_seed_N +
       (Number(randomInAB(-1, 1).toFixed(2)) * underlying_seed_N) / 100;
     callSeedPopulator = true;
+    underlyingNC = true;
+  } else {
+    underlyingNC = false;
   }
   if (seedChangerS < 0.01) {
     // console.log("changing the seed");
@@ -168,6 +175,9 @@ function seedChangerFunc() {
       underlying_seed_S +
       (Number(randomInAB(-1, 1).toFixed(2)) * underlying_seed_S) / 100;
     callSeedPopulator = true;
+    underlyingSC = true;
+  } else {
+    underlyingSC = false;
   }
   if (callSeedPopulator) seedPopulator();
 }
@@ -249,6 +259,12 @@ function getLatestvalues(subscriptions: string[]): tokenVal[] {
     if (Ndone && Sdone) break;
     else if (subscriptions[i] === "N") {
       Ndone = true;
+      if (underlyingNC) {
+        finalSet.push({
+          token: `N`,
+          val: underlyingN,
+        });
+      }
       for (let j = 0; j < 75; j++) {
         if (dbObject[j][3] === 1) {
           finalSet.push({
@@ -265,6 +281,12 @@ function getLatestvalues(subscriptions: string[]): tokenVal[] {
       }
     } else if (subscriptions[i] === "S") {
       Sdone = true;
+      if (underlyingSC) {
+        finalSet.push({
+          token: `S`,
+          val: underlyingS,
+        });
+      }
       for (let j = 75; j < 150; j++) {
         if (dbObject[j][3] === 1) {
           finalSet.push({
@@ -304,6 +326,16 @@ function getLatestvalues(subscriptions: string[]): tokenVal[] {
   return finalSet;
 }
 
+app.get("/init", (req, res) => {
+  console.log("recieved a http request");
+  res.send({
+    yesterPriceN,
+    yesterPriceS,
+    yesterOptionPrice,
+  });
+  console.log("sent a response for http request");
+});
+
 io.on("connection", (socket) => {
   connections += 1;
   SocketToSubscribers.set(socket, []);
@@ -323,31 +355,38 @@ io.on("connection", (socket) => {
     // });
     dataBuilder();
     timeInterval = setInterval(() => {
-      console.time("measuringRoutineFetch");
+      // console.time("measuringRoutineFetch");
       SocketToSubscribers.forEach((val, socketOne) => {
         const lvals: tokenVal[] = getLatestvalues(val);
         if (lvals.length > 0) socketOne.emit("update", lvals);
       });
-      console.timeEnd("measuringRoutineFetch");
+      // console.timeEnd("measuringRoutineFetch");
       dataBuilder();
     }, 200);
   }
 
   socket.on("optionchain", (data: string) => {
+    console.log("recieved optionchain");
     if (data === "N") {
-      socket.emit("optionchainN", dbObject.slice(0, 75));
+      socket.emit("optionchaindata", underlyingN, dbObject.slice(0, 75));
       const temp = SocketToSubscribers.get(socket);
       temp?.push(data);
       temp?.sort(sortCompareFunc);
       if (temp) SocketToSubscribers.set(socket, temp);
       else SocketToSubscribers.set(socket, [data]);
+      // console.log(SocketToSubscribers.get(socket));
     } else if (data === "S") {
-      socket.emit("optionchainS", dbObject.slice(75, dbObject.length - 1));
+      socket.emit(
+        "optionchaindata",
+        underlyingS,
+        dbObject.slice(75, dbObject.length - 1),
+      );
       const temp = SocketToSubscribers.get(socket);
       temp?.push(data);
       temp?.sort(sortCompareFunc);
       if (temp) SocketToSubscribers.set(socket, temp);
       else SocketToSubscribers.set(socket, [data]);
+      // console.log(SocketToSubscribers.get(socket));
     }
   });
 
