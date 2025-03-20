@@ -367,10 +367,10 @@ io.on("connection", (socket) => {
     }, 200);
   }
 
-  socket.on("optionchain", (data: string) => {
+  socket.on("optionchain", (data: string, id: string) => {
     console.log("recieved optionchain");
     if (data === "N") {
-      socket.emit("optionchaindata", underlyingN, dbObject.slice(0, 75));
+      socket.emit("optionchaindata", underlyingN, dbObject.slice(0, 75), id);
       const temp = SocketToSubscribers.get(socket);
       temp?.push(data);
       temp?.sort(sortCompareFunc);
@@ -382,6 +382,7 @@ io.on("connection", (socket) => {
         "optionchaindata",
         underlyingS,
         dbObject.slice(75, dbObject.length),
+        id,
       );
       const temp = SocketToSubscribers.get(socket);
       temp?.push(data);
