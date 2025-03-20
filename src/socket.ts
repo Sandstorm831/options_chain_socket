@@ -77,8 +77,10 @@ function randomYesterdayPrices() {
       const Pyp = Number(randomInAB(0, 3000).toFixed(2));
       const x = [Cyp, Pyp];
       if (j == 0) {
+        x.push(initialStrikeN + i * 100);
         yesterOptionPrice.N.push(x);
       } else {
+        x.push(initialStrikeS + i * 100);
         yesterOptionPrice.S.push(x);
       }
     }
@@ -342,12 +344,12 @@ io.on("connection", (socket) => {
   console.log(`Connected devices : ${connections}`);
   if (connections > 0 && timeInterval === null) {
     console.log("starting data transmission");
-    console.time("measuringInitialFetch");
-    SocketToSubscribers.forEach((val, socketOne) => {
-      const lvals: tokenVal[] = getLatestvalues(val);
-      if (lvals.length > 0) socketOne.emit("update", lvals);
-    });
-    console.timeEnd("measuringInitialFetch");
+    // console.time("measuringInitialFetch");
+    // SocketToSubscribers.forEach((val, socketOne) => {
+    //   const lvals: tokenVal[] = getLatestvalues(val);
+    //   if (lvals.length > 0) socketOne.emit("update", lvals);
+    // });
+    // console.timeEnd("measuringInitialFetch");
     // io.emit("data", {
     //   data: preCalcData,
     //   underlyingN: underlyingN,
@@ -355,12 +357,12 @@ io.on("connection", (socket) => {
     // });
     dataBuilder();
     timeInterval = setInterval(() => {
-      // console.time("measuringRoutineFetch");
+      console.time("measuringRoutineFetch");
       SocketToSubscribers.forEach((val, socketOne) => {
         const lvals: tokenVal[] = getLatestvalues(val);
         if (lvals.length > 0) socketOne.emit("update", lvals);
       });
-      // console.timeEnd("measuringRoutineFetch");
+      console.timeEnd("measuringRoutineFetch");
       dataBuilder();
     }, 200);
   }
@@ -379,7 +381,7 @@ io.on("connection", (socket) => {
       socket.emit(
         "optionchaindata",
         underlyingS,
-        dbObject.slice(75, dbObject.length - 1),
+        dbObject.slice(75, dbObject.length),
       );
       const temp = SocketToSubscribers.get(socket);
       temp?.push(data);
@@ -411,7 +413,10 @@ io.on("connection", (socket) => {
     }
     if (PorC === "P") secInd = 2;
     else secInd = 1;
-    socket.emit("realtimeD", dbObject[ind][secInd]);
+    socket.emit("realtimedata", {
+      token: data,
+      tokenval: dbObject[ind][secInd],
+    });
     const temp = SocketToSubscribers.get(socket);
     temp?.push(data);
     temp?.sort(sortCompareFunc);
