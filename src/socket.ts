@@ -368,6 +368,16 @@ io.on("connection", (socket) => {
     }, 200);
   }
 
+  socket.on("fetchyesterdata", () => {
+    console.log("recieved a yesterdata request");
+    socket.emit("fetchyesterdata", {
+      yesterPriceN,
+      yesterPriceS,
+      yesterOptionPrice,
+    });
+    console.log("sent a response for yesterdata request");
+  });
+
   socket.on("optionchain", (data: string, id: string) => {
     console.log("recieved optionchain");
     if (data === "N") {
