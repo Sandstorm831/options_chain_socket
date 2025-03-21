@@ -1,7 +1,6 @@
 import express from "express";
 import { createServer } from "http";
 import { DefaultEventsMap, Server, Socket } from "socket.io";
-import { Token } from "typescript";
 
 const initialStrikeN = 18000;
 const initialStrikeS = 68000;
@@ -308,12 +307,12 @@ function getLatestvalues(subscriptions: string[]): tokenVal[] {
         Ndone &&
         Number(subscriptions[i].slice(0, subscriptions[i].length - 1)) < 30000
       ) {
-        continue;
+
       } else if (
         Sdone &&
         Number(subscriptions[i].slice(0, subscriptions[i].length - 1)) > 30000
       ) {
-        continue;
+
       } else {
         const [ind, subind, truthInd] = getIndexfromToken(subscriptions[i]);
         if (dbObject[ind][truthInd] === 1) {
@@ -450,9 +449,9 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("tokens", (data: string) => {
-    // SocketToSubscribers.set(socket, data);
-  });
+  // socket.on("tokens", (data: string) => {
+  //   // SocketToSubscribers.set(socket, data);
+  // });
 
   socket.on("option_chain", () => {});
 });
