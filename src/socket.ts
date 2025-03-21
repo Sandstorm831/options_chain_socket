@@ -42,6 +42,10 @@ type tokenVal = {
 };
 
 const app = express();
+app.all("/", function (req, res, next) {
+  res.header("Access-Control-Allow-Origin", "http://localhost:3000");
+  next();
+});
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
@@ -307,12 +311,10 @@ function getLatestvalues(subscriptions: string[]): tokenVal[] {
         Ndone &&
         Number(subscriptions[i].slice(0, subscriptions[i].length - 1)) < 30000
       ) {
-
       } else if (
         Sdone &&
         Number(subscriptions[i].slice(0, subscriptions[i].length - 1)) > 30000
       ) {
-
       } else {
         const [ind, subind, truthInd] = getIndexfromToken(subscriptions[i]);
         if (dbObject[ind][truthInd] === 1) {
