@@ -42,10 +42,7 @@ type tokenVal = {
 };
 
 const app = express();
-app.all("/", function (req, res, next) {
-  res.header("Access-Control-Allow-Origin", "http://localhost:3000");
-  next();
-});
+
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
@@ -331,6 +328,7 @@ function getLatestvalues(subscriptions: string[]): tokenVal[] {
 
 app.get("/init", (req, res) => {
   console.log("recieved a http request");
+  res.header("Access-Control-Allow-Origin", "http://localhost:3000");
   res.send({
     yesterPriceN,
     yesterPriceS,
